@@ -1,0 +1,85 @@
+import numpy as np
+import geopandas as gpd
+import matplotlib.pyplot as plt
+import matplotlib
+from shapely.geometry import Polygon
+
+df=pd.read_csv("CustomerSegmentation.csv")
+country=df["Country Of Origin"]
+country.unique()
+
+#Uploading and manipulating the Geopandas library
+world=gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+
+world.rename(columns={"name":"Country"},inplace=True)
+world.drop(columns=world.columns[0],axis=1,inplace=True)
+world.drop(columns=world.columns[3],axis=1,inplace=True)
+
+#'For loop' to sum the sales per country
+country_count=[]
+country_list=country.unique()
+
+y=len(country_list)
+for i in range(y):
+    country_count.append(len(country[country==country_list[i]]))
+
+#Print dataframe for visualisation
+count1=country_count
+count2=list(zip(country_list,count1))
+new_df=pd.DataFrame(count2)
+new_df.columns=["Country","Value"]
+print(new_df)
+
+#Combine country names/count into a single data frame
+country_count=np.log(country_count)
+
+country_dict=list(zip(country_list,country_count))
+country_df=pd.DataFrame(country_dict)
+
+country_df.columns=["Country","Value"]
+country_df["Value"]=country_df["Value"].astype(int)
+
+#Match country names from dataset to dataframe
+country_df['Country'].replace("USA","United States of America",inplace=True)
+country_df['Country'].replace("UK","United Kingdom",inplace=True)
+country_df['Country'].replace("South Aftrica","South Africa",inplace=True)
+
+#Create a geodataframe
+geo_df=pd.merge(country_df,world,how="right",on="Country")
+geo_df=gpd.GeoDataFrame(geo_df)
+
+geo_df['Value']=geo_df['Value'].fillna(0)
+
+#Plot the Geodataframe as a choropleth map
+#Used the following resource to shorten the colourbar:
+#https://stackoverflow.com/questions/70754841/how-to-adjust-the-color-bar-size-in-geopandas
+geo_df.plot(column="Value",legend=True,cmap="Reds",legend_kwds={"shrink":.5})
+plt.title("Car sales per country (log)",fontsize=13)
+
+
+
+
+#Create dataframe for European countries and drop irrelevant columns
+europe=world[world.continent=="Europe"]
+europe.rename(columns={"name":"Country"},inplace=True)
+
+europe.drop(columns=world.columns[0],axis=1,inplace=True)
+europe.drop(columns=world.columns[2],axis=1,inplace=True)
+
+europe=europe[(europe.Country!="Russia")&(europe.Country!="Iceland")]
+
+#Used the following link to remove French Guyana(code copied from website):
+#https://towardsdatascience.com/geoplotting-emissions-intensity-of-electricity-generation-in-europe-90c22b378858#
+polygon=Polygon([(-25,35),(40,35),(40,75),(-25,75)])
+poly_gdf=gpd.GeoDataFrame([1],geometry=[polygon],crs=world.crs)
+europe=gpd.clip(europe, polygon)
+
+#Create a geodataframe for Europe
+europe=pd.merge(country_df,europe,how="right",on="Country")
+europe_df=gpd.GeoDataFrame(europe)
+
+europe_df["Value"]=europe_df["Value"].fillna(0)
+
+#Plot the choropleth map
+europe_df.plot(column="Value",legend=True,cmap="Reds")
+plt.title("Car sales per country in Europe (log)",fontsize=11)
