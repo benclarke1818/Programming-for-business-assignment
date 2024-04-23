@@ -1,0 +1,97 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib
+import math
+import statistics
+
+oldmovie_df=pd.read_csv("IMDBMovies.csv")
+newmovie_df=pd.read_csv("MoviesData_new.csv")
+
+oldmovie_df.head()
+newmovie_df.head()
+
+release_date=newmovie_df["Release_Date"]
+
+#Change the new movie release dates to just show the year
+change_dates=[]
+
+for i in range(len(release_date)):
+  dates=release_date[i]
+  dates=dates.replace(dates[:6],"")
+  change_dates.append(dates)
+
+change_dates=pd.DataFrame(change_dates)
+
+#load the old and new movie data and make it into 1 data frame
+newmovie_df=pd.concat([newmovie_df,change_dates],axis=1)
+newmovie_df.columns=["Release_Date","Title","Overview","Genre","Release_Year"]
+newmovie_df=newmovie_df[["Release_Year","Title","Genre"]]
+
+oldmovie_df=oldmovie_df[["Released_Year","Series_Title","Genre"]]
+oldmovie_df.columns=["Release_Year","Title","Genre"]
+
+movies=pd.concat([oldmovie_df,newmovie_df],axis=0)
+
+#check that the dataframe is 2000 rows, since both datasets have 1000 rows
+movies.shape
+
+#'For loop' to create a data frame containing all combinations of year and genre
+genre_list= ["Action","Fantasy","History","War","Crime","Mystery","Biography","Sport","Comedy","Thriller","Animation","Adventure","Family","Sci-Fi","Horror","Romance","Western","Music"]
+year_list=[]
+
+for i in range(1993,2023):
+  a=str(i)
+  year_list.append(a)
+
+#'for loop' to append list with year and genre
+movies_df=[]
+
+for i in range(len(movies)):
+  for genre in genre_list:
+    for year in year_list:
+      if year in movies.iloc[i,0]:
+        if genre in movies.iloc[i,2]:
+          movies_df.append(year+"/"+genre)
+
+movies_df=pd.DataFrame(movies_df)
+movies_df.columns=["Film"]
+
+#Used this source to create a column named 'freq’:
+#https://stackoverflow.com/questions/22391433/count-the-frequency-that-a-value-occurs-in-a-dataframe-column
+movies_df["freq"]=movies_df.groupby("Film")["Film"].transform("count")
+movies_df[["Year","Genre"]]=movies_df["Film"].str.split("/",expand=True)
+
+#create data frame containing the highest frequency genres for each year
+movies_df2=movies_df.groupby("Year")["freq"].max()
+movies_df2=movies_df2.reset_index()
+movies_df2.columns=["Year","freq"]
+
+#'For loop' to create a dataframe of year/genre combinations
+movies_unique=pd.DataFrame()
+
+for i in range(len(movies_df2)):
+  unique_rows=pd.DataFrame(movies_df[(movies_df["Year"]==movies_df2.iloc[i,0]) & (movies_df["freq"]==movies_df2.iloc[i,1])])
+  unique_rows=unique_rows.drop_duplicates()
+  movies_unique=pd.concat([movies_unique,unique_rows],ignore_index=True)
+
+
+#Combine data into 1 dataset that shows genres in the same row
+final_df=movies_unique.groupby("Year")["Genre"].apply("/".join).reset_index()
+final_df=pd.merge(movies_unique,final_df[["Year", "Genre"]], on="Year").drop_duplicates()
+
+#Create the final data frame with the desired columns
+combined_column=[]
+
+for i in range(len(final_df)):
+  if final_df.iloc[i,3]==final_df.iloc[i,4]:
+    combined_column.append(final_df.iloc[i,3])
+  if final_df.iloc[i,3]!=final_df.iloc[i,4]:
+    combined_column.append(final_df.iloc[i,4])
+
+final_df["combined"]=combined_column
+final_df=final_df.drop(columns=["Genre_x","Genre_y","Film"])
+final_df=final_df[["Year","combined","freq"]]
+final_df.columns=["Year","Most popular genre(s)","Frequency"]
+final_df=final_df.drop_duplicates()
+print(final_df)
