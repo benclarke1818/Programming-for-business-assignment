@@ -1,0 +1,83 @@
+import pandas as pd
+import numpy as np
+import geopandas as gpd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+#Get data and extract relevant columns
+df=pd.read_csv("CustomerSegmentation.csv")
+fuel_type=df["Fuel Type"]
+ages=df["Age"]
+
+#Used unique function to find unique values and strip function to remove whitespace
+fuel_type.unique()
+fuel_type=fuel_type.str.strip()
+
+#Create a list where each age range is assigned a value from 1 to 9
+age_count=[]
+
+for age in ages:
+  if age<=20:
+    age_count.append(1)
+  if 20<age<=30:
+    age_count.append(2)
+  if 30<age<=40:
+    age_count.append(3)
+  if 40<age<= 50:
+    age_count.append(4)
+  if 50<age<=60:
+    age_count.append(5)
+  if 60<age<=70:
+    age_count.append(6)
+  if 70<age<=80:
+    age_count.append(7)
+  if age>80:
+    age_count.append(8)
+
+fuel_count=list(fuel_type)
+
+#Checking that both lists are the same length before combining them
+len(age_count)
+len(fuel_count)
+
+dictionary=list(zip(age_count,fuel_count))
+
+#’For loop’ to sum the total number of each age type
+age_sum=[]
+for i in range(1,9):
+  a=age_count.count(i)
+  age_sum.append(a)
+
+#Calculate the proportion of each fuel type in percentage terms
+percentageP=[]
+percentageD=[]
+percentageH=[]
+percentageE=[]
+
+for i in range(1,9):
+    percentageP.append(100*(dictionary.count((i,"Petrol"))/age_sum[i-1]))
+    percentageD.append(100*(dictionary.count((i,"Diesel"))/age_sum[i-1]))
+    percentageH.append(100*(dictionary.count((i,"Hybrid"))/age_sum[i-1]))
+    percentageE.append(100*(dictionary.count((i,"Electric"))/age_sum[i-1]))
+
+#Used the following resource to display each heatmap side-by-side: 
+#https://www.tutorialspoint.com/combining-two-heatmaps-in-seaborn
+fig,(ax1,ax2,ax3,ax4)=plt.subplots(ncols=4)
+fig.subplots_adjust(wspace=0)
+
+#Create all four heatmaps, adjusting columns and colours
+yticklabel=["<21","21-30","31-40","41-50","51-60","61-70","71-80",">80"]
+
+dataP2=pd.DataFrame(percentageP)
+sns.heatmap(dataP2,annot=True,cbar=False,ax=ax1,cmap="Greens",vmin=53,vmax=61,xticklabels="P",yticklabels=yticklabel)
+
+dataD2=pd.DataFrame(percentageD)
+sns.heatmap(dataD2,annot=True,cbar=False,ax=ax2,yticklabels=False,xticklabels="D",cmap="Greens",vmin=31)
+
+dataH2=pd.DataFrame(percentageH)
+sns.heatmap(dataH2,annot=True,cbar=False,ax=ax3,yticklabels=False,xticklabels="H",cmap="Greens",vmin=2.8)
+
+dataE2=pd.DataFrame(percentageE)
+sns.heatmap(dataE2,annot=True,cbar=False,ax=ax4,yticklabels=False,xticklabels="E",cmap="Greens",vmin=3.5)
+
+plt.title("Percentage of Petrol, Diesel, Hyrid, and Electric cars brought per age range",loc="right",fontsize=10)
