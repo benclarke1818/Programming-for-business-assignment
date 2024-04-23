@@ -1,0 +1,42 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib
+import math
+import statistics
+
+df=pd.read_csv("CustomerSegmentation.csv")
+data_frame=df[["Gender","Year Of Purchase","Salary"]]
+
+#Find unique values
+purchase_year=df["Year Of Purchase"]
+purchase_year.unique()
+
+#'For loop' to find the average salary for men/women in each year
+years=range(2008,2022)
+genders=["Male","Female"]
+results=[]
+
+for year in years:
+  for gender in genders:
+    grouped_data=data_frame[(data_frame["Year Of Purchase"]==year)&(data_frame["Gender"]==gender)]
+    average_salary=statistics.mean(grouped_data["Salary"])
+    results.append((gender,average_salary))
+
+#Create the final dataframe with male and female data in different columns
+data_frame2=pd.DataFrame(results)
+salary_data=data_frame2[1]
+male_salary=salary_data.iloc[::2]
+fem_salary=salary_data.iloc[1::2]
+
+data=list(zip(male_salary,fem_salary))   
+data_frame3=pd.DataFrame(data)
+
+#Plot the data and add axis headings
+data_frame3.set_axis(["08","09","10","11","12","13","14","15","16","17","18","19","20","21"],axis='index',inplace=True)
+
+plt.plot(data_frame3)
+plt.xlabel("Year")
+plt.ylabel("Average salary (£)")
+plt.title("Average salary of male and female car buyers between 2008 and 2021")
+
